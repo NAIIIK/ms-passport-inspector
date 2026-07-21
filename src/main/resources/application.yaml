@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: PassportInspector
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+minio:
+  url: http://localhost:9000
+  access-key: minio99
+  secret-key: minio123
+  bucket: passport-inspector
+  part-size-bytes: 10485760
