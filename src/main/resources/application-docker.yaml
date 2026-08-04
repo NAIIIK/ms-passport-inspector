@@ -1,0 +1,2 @@
+minio:
+  url: ${MINIO_URL:http://minio:9000}
