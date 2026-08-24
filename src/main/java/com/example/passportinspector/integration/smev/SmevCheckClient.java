@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 @FeignClient(name = "smev-check-client", url = "${smev.client.url}")
 public interface SmevCheckClient {
     @PostMapping(
-            value = "/api/check/v1/CheckPassport",
+            value = "/smev-api/v1/CheckPassport",
             consumes = "application/json",
             produces = "application/json"
     )
