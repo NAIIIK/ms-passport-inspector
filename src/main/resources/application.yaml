@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: queen-passport-inspector
+    name: ms-passport-inspector
 
   servlet:
     multipart:
