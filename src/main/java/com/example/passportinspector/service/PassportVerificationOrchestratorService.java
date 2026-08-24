@@ -1,24 +1,32 @@
 package com.example.passportinspector.service;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import com.example.passportinspector.exception.CsvValidationException;
 import com.example.passportinspector.exception.FileUploadException;
+import com.example.passportinspector.mapper.PassportEntityMapper;
 import com.example.passportinspector.model.AppConstants;
 import com.example.passportinspector.model.dto.BatchCheckResultDto;
 import com.example.passportinspector.model.dto.CheckInitResponseDto;
 import com.example.passportinspector.model.dto.SingleCheckRequestDto;
 import com.example.passportinspector.model.dto.SingleCheckResultDto;
-import com.example.passportinspector.model.type.CheckStatus;
+import com.example.passportinspector.model.type.CsvTaskStatus;
+import com.example.passportinspector.model.type.DocumentStatus;
+import com.example.passportinspector.model.type.JobStatus;
+import com.example.passportinspector.model.type.JobType;
+import com.example.passportinspector.repository.CsvTaskRepository;
+import com.example.passportinspector.repository.JobRepository;
+import com.example.passportinspector.repository.PassportRepository;
+import com.example.passportinspector.repository.entity.CsvTaskEntity;
+import com.example.passportinspector.repository.entity.JobEntity;
+import com.example.passportinspector.repository.entity.PassportEntity;
 import com.example.passportinspector.util.CsvValidationUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -26,84 +34,90 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PassportVerificationOrchestratorService {
 
     private final MinioService minioService;
+    private final PassportEntityMapper passportEntityMapper;
+    private final PassportRepository passportRepository;
+    private final CsvTaskRepository csvTaskRepository;
+    private final JobRepository jobRepository;
 
-    private final Map<UUID, SingleCheckState> singleChecks = new ConcurrentHashMap<>();
-    private final Map<UUID, BatchCheckState> batchChecks = new ConcurrentHashMap<>();
-
+    @Transactional
     public CheckInitResponseDto singleCheckInit(SingleCheckRequestDto request, String rawMerchantId) {
-
         UUID jobId = UUID.randomUUID();
         UUID merchantId = UUID.fromString(rawMerchantId);
 
-        singleChecks.put(jobId, new SingleCheckState(
-                merchantId,
-                request.getExtId(),
-                request.getDocNo(),
-                Instant.now()
-        ));
+        JobEntity job = JobEntity.builder()
+                .jobId(jobId)
+                .merchantId(merchantId)
+                .jobType(JobType.SINGLE)
+                .jobStatus(JobStatus.PENDING)
+                .build();
 
-        log.info(
-                "Single check accepted. jobId={}, merchantId={}, extId={}",
-                jobId,
-                merchantId,
-                request.getExtId()
-        );
+        PassportEntity passport = passportEntityMapper.fromSingleRequest(jobId, merchantId, request);
+
+        jobRepository.save(job);
+        passportRepository.save(passport);
+
+        log.info("Single passport check job created. jobId={}, merchantId={}, extId={}",
+                jobId, merchantId, request.getExtId());
 
         return CheckInitResponseDto.builder()
                 .jobId(jobId)
-                .checkStatus(CheckStatus.IN_PROGRESS)
+                .checkStatus(JobStatus.IN_PROGRESS)
                 .build();
     }
 
     public SingleCheckResultDto singleCheckResult(UUID jobId, String rawMerchantId) {
         UUID merchantId = UUID.fromString(rawMerchantId);
-        SingleCheckState state = singleChecks.get(jobId);
 
-        if (state == null || !state.merchantId().equals(merchantId)) {
-            return SingleCheckResultDto.builder()
-                    .checkStatus(CheckStatus.FAILED)
-                    .build();
-        }
-
-        return SingleCheckResultDto.builder()
-                .checkStatus(CheckStatus.IN_PROGRESS)
-                .build();
+        return jobRepository.findByJobIdAndMerchantId(jobId, merchantId)
+                .map(job -> buildSingleResult(jobId, job.getJobStatus()))
+                .orElseGet(() -> SingleCheckResultDto.builder()
+                        .checkStatus(JobStatus.FAILED)
+                        .build());
     }
 
+    @Transactional
     public CheckInitResponseDto batchCheckInit(MultipartFile file, String rawMerchantId) {
         UUID jobId = UUID.randomUUID();
+        UUID merchantId = UUID.fromString(rawMerchantId);
 
         try {
-            UUID merchantId = UUID.fromString(rawMerchantId);
-
             CsvValidationUtil.validate(file);
 
             String objectName = buildCsvObjectName(merchantId, jobId);
             minioService.upload(objectName, file);
 
-            batchChecks.put(jobId, new BatchCheckState(
-                    merchantId,
-                    objectName,
-                    Instant.now()
-            ));
-
-            log.info(
-                    "Batch check accepted. jobId={}, merchantId={}, objectName={}",
-                    jobId,
-                    merchantId,
-                    objectName
-            );
-
-            return CheckInitResponseDto.builder()
+            JobEntity job = JobEntity.builder()
                     .jobId(jobId)
-                    .checkStatus(CheckStatus.IN_PROGRESS)
+                    .merchantId(merchantId)
+                    .jobType(JobType.BATCH)
+                    .jobStatus(JobStatus.PENDING)
                     .build();
-        } catch (CsvValidationException | FileUploadException e) {
-            log.warn("Batch check failed. jobId={}, reason={}", jobId, e.getMessage());
+
+            CsvTaskEntity csvTask = CsvTaskEntity.builder()
+                    .jobId(jobId)
+                    .merchantId(merchantId)
+                    .fileName(objectName)
+                    .status(CsvTaskStatus.NEW)
+                    .build();
+
+            jobRepository.save(job);
+            csvTaskRepository.save(csvTask);
+
+            log.info("Batch passport check job created. jobId={}, merchantId={}, objectName={}",
+                    jobId, merchantId, objectName);
 
             return CheckInitResponseDto.builder()
                     .jobId(jobId)
-                    .checkStatus(CheckStatus.FAILED)
+                    .checkStatus(JobStatus.IN_PROGRESS)
+                    .build();
+
+        } catch (CsvValidationException | FileUploadException e) {
+            log.warn("Batch passport check job failed on init. jobId={}, merchantId={}, reason={}",
+                    jobId, merchantId, e.getMessage());
+
+            return CheckInitResponseDto.builder()
+                    .jobId(jobId)
+                    .checkStatus(JobStatus.FAILED)
                     .errorCause(e.getMessage())
                     .build();
         }
@@ -111,37 +125,74 @@ public class PassportVerificationOrchestratorService {
 
     public BatchCheckResultDto batchCheckResult(UUID jobId, String rawMerchantId) {
         UUID merchantId = UUID.fromString(rawMerchantId);
-        BatchCheckState state = batchChecks.get(jobId);
 
-        if (state == null || !state.merchantId().equals(merchantId)) {
+        return jobRepository.findByJobIdAndMerchantId(jobId, merchantId)
+                .map(job -> buildBatchResult(jobId, merchantId, job.getJobStatus()))
+                .orElseGet(() -> BatchCheckResultDto.builder()
+                        .checkStatus(JobStatus.FAILED)
+                        .data(List.of())
+                        .build());
+    }
+
+    private SingleCheckResultDto buildSingleResult(UUID jobId, JobStatus jobStatus) {
+        if (jobStatus == JobStatus.COMPLETED) {
+            return passportRepository.findFirstByJobId(jobId)
+                    .map(passport -> {
+                        if (passport.getDocumentStatus() == DocumentStatus.INVALID) {
+                            return SingleCheckResultDto.builder()
+                                    .checkStatus(JobStatus.COMPLETED)
+                                    .extId(passport.getExtId())
+                                    .build();
+                        }
+
+                        return SingleCheckResultDto.builder()
+                                .checkStatus(JobStatus.COMPLETED)
+                                .build();
+                    })
+                    .orElseGet(() -> SingleCheckResultDto.builder()
+                            .checkStatus(JobStatus.FAILED)
+                            .build());
+        }
+
+        if (jobStatus == JobStatus.FAILED) {
+            return SingleCheckResultDto.builder()
+                    .checkStatus(JobStatus.FAILED)
+                    .build();
+        }
+
+        return SingleCheckResultDto.builder()
+                .checkStatus(JobStatus.IN_PROGRESS)
+                .build();
+    }
+
+    private BatchCheckResultDto buildBatchResult(UUID jobId, UUID merchantId, JobStatus jobStatus) {
+        if (jobStatus == JobStatus.COMPLETED) {
+            List<String> invalidExtIds = passportRepository
+                    .findByJobIdAndMerchantIdAndDocumentStatus(jobId, merchantId, DocumentStatus.INVALID)
+                    .stream()
+                    .map(PassportEntity::getExtId)
+                    .toList();
+
             return BatchCheckResultDto.builder()
-                    .checkStatus(CheckStatus.FAILED)
+                    .checkStatus(JobStatus.COMPLETED)
+                    .data(invalidExtIds)
+                    .build();
+        }
+
+        if (jobStatus == JobStatus.FAILED) {
+            return BatchCheckResultDto.builder()
+                    .checkStatus(JobStatus.FAILED)
                     .data(List.of())
                     .build();
         }
 
         return BatchCheckResultDto.builder()
-                .checkStatus(CheckStatus.IN_PROGRESS)
+                .checkStatus(JobStatus.IN_PROGRESS)
                 .data(List.of())
                 .build();
     }
 
     private String buildCsvObjectName(UUID merchantId, UUID jobId) {
         return "batch/" + merchantId + "/" + jobId + AppConstants.CSV_EXTENSION;
-    }
-
-    private record SingleCheckState(
-            UUID merchantId,
-            String extId,
-            String docNo,
-            Instant createdAt
-    ) {
-    }
-
-    private record BatchCheckState(
-            UUID merchantId,
-            String objectName,
-            Instant createdAt
-    ) {
     }
 }

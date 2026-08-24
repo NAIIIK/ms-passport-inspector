@@ -1,0 +1,274 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-passport-check-jobs
+      author: javarush
+      changes:
+        - createTable:
+            tableName: jobs
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: job_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+
+              - column:
+                  name: merchant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: job_type
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: job_status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: attempts
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: in_progress_since
+                  type: timestamp with time zone
+
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+
+        - createIndex:
+            tableName: jobs
+            indexName: idx_jobs_job_merchant
+            columns:
+              - column:
+                  name: job_id
+              - column:
+                  name: merchant_id
+
+        - createIndex:
+            tableName: jobs
+            indexName: idx_jobs_status_created
+            columns:
+              - column:
+                  name: job_status
+              - column:
+                  name: created_at
+
+  - changeSet:
+      id: 002-create-passports
+      author: javarush
+      changes:
+        - createTable:
+            tableName: passports
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: job_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: merchant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: ext_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: check_status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: document_status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: person_last_name
+                  type: varchar(100)
+
+              - column:
+                  name: person_first_name
+                  type: varchar(100)
+
+              - column:
+                  name: person_middle_name
+                  type: varchar(100)
+
+              - column:
+                  name: doc_series_no
+                  type: varchar(4)
+
+              - column:
+                  name: doc_no
+                  type: varchar(10)
+
+              - column:
+                  name: attempts
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: in_progress_since
+                  type: timestamp with time zone
+
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+
+        - addUniqueConstraint:
+            tableName: passports
+            columnNames: job_id, ext_id
+            constraintName: uk_passports_job_ext_id
+
+        - createIndex:
+            tableName: passports
+            indexName: idx_passports_check_status_created
+            columns:
+              - column:
+                  name: check_status
+              - column:
+                  name: created_at
+
+        - createIndex:
+            tableName: passports
+            indexName: idx_passports_job_merchant_document_status
+            columns:
+              - column:
+                  name: job_id
+              - column:
+                  name: merchant_id
+              - column:
+                  name: document_status
+
+        - addForeignKeyConstraint:
+            baseTableName: passports
+            baseColumnNames: job_id
+            referencedTableName: jobs
+            referencedColumnNames: job_id
+            constraintName: fk_passports_job_id
+
+  - changeSet:
+      id: 003-create-csv-tasks
+      author: javarush
+      changes:
+        - createTable:
+            tableName: csv_tasks
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: job_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+
+              - column:
+                  name: merchant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: file_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: attempts
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: in_progress_since
+                  type: timestamp with time zone
+
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+
+        - createIndex:
+            tableName: csv_tasks
+            indexName: idx_csv_tasks_status_created
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at
+
+        - addForeignKeyConstraint:
+            baseTableName: csv_tasks
+            baseColumnNames: job_id
+            referencedTableName: jobs
+            referencedColumnNames: job_id
+            constraintName: fk_csv_tasks_job_id

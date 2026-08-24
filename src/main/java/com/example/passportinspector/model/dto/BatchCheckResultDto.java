@@ -1,6 +1,6 @@
 package com.example.passportinspector.model.dto;
 
-import com.example.passportinspector.model.type.CheckStatus;
+import com.example.passportinspector.model.type.JobStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +16,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BatchCheckResultDto {
 
-    private CheckStatus checkStatus;
+    private JobStatus checkStatus;
     private List<String> data;
 
 }

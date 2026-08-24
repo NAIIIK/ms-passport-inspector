@@ -1,13 +1,14 @@
 package com.example.passportinspector.service;
 
-import com.example.passportinspector.config.MinioConfig;
-import com.example.passportinspector.exception.FileUploadException;
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.example.passportinspector.config.MinioConfig;
+import com.example.passportinspector.exception.FileUploadException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,9 +18,7 @@ import java.io.InputStream;
 @Component
 @RequiredArgsConstructor
 public class MinioService {
-
     private static final int DEFAULT_PART_SIZE_BYTES = 10 * 1024 * 1024;
-
     private final MinioClient minioClient;
     private final MinioConfig.MinioProps props;
 
@@ -27,41 +26,59 @@ public class MinioService {
         checkBucketExists();
 
         try (InputStream inputStream = file.getInputStream()) {
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(props.getBucket())
-                            .object(objectName)
+            minioClient
+                    .putObject(PutObjectArgs.builder()
+                            .bucket(props.getBucket()).object(objectName)
                             .stream(inputStream, -1, resolvePartSizeBytes())
                             .contentType(resolveContentType(file))
-                            .build()
+                            .build());
+
+            log.info(
+                    "File uploaded to MinIO. bucket={}, objectName={}",
+                    props.getBucket(),
+                    objectName
+            );
+        } catch (Exception e) {
+            log.error(
+                    "Error uploading file to MinIO. bucket={}, objectName={}",
+                    props.getBucket(),
+                    objectName,
+                    e
             );
 
-            log.info("File uploaded to MinIO. bucket={}, objectName={}", props.getBucket(), objectName);
-        } catch (Exception e) {
-            log.error("Error uploading file to MinIO. bucket={}, objectName={}", props.getBucket(), objectName, e);
             throw new FileUploadException("Failed to upload file to MinIO");
+        }
+    }
+
+    public InputStream downloadFile(String objectName) {
+        checkBucketExists();
+
+        try {
+            return minioClient.
+                    getObject(GetObjectArgs.builder()
+                            .bucket(props.getBucket())
+                            .object(objectName)
+                            .build());
+        } catch (Exception e) {
+            log.error(
+                    "Error downloading file from MinIO. bucket={}, objectName={}",
+                    props.getBucket(),
+                    objectName,
+                    e
+            );
+            throw new FileUploadException("Failed to download file from MinIO");
         }
     }
 
     private void checkBucketExists() {
         try {
-            boolean exists = minioClient.bucketExists(
-                    BucketExistsArgs.builder()
-                            .bucket(props.getBucket())
-                            .build()
-            );
-
+            boolean exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(props.getBucket()).build());
             if (!exists) {
-                minioClient.makeBucket(
-                        MakeBucketArgs.builder()
-                                .bucket(props.getBucket())
-                                .build()
-                );
-
-                log.info("MinIO bucket created: {}", props.getBucket());
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket(props.getBucket()).build());
+                log.info("MinIO bucket created. bucket={}", props.getBucket());
             }
         } catch (Exception e) {
-            log.error("Failed to check or create MinIO bucket: {}", props.getBucket(), e);
+            log.error("Failed to check or create MinIO bucket. bucket={}", props.getBucket(), e);
             throw new FileUploadException("Failed to check or create MinIO bucket");
         }
     }
@@ -70,7 +87,6 @@ public class MinioService {
         if (props.getPartSizeBytes() == null) {
             return DEFAULT_PART_SIZE_BYTES;
         }
-
         return props.getPartSizeBytes();
     }
 
@@ -78,7 +94,6 @@ public class MinioService {
         if (file.getContentType() == null || file.getContentType().isBlank()) {
             return "text/csv";
         }
-
         return file.getContentType();
     }
 }

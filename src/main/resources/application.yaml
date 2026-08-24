@@ -1,18 +1,54 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
-    name: PassportInspector
+    name: queen-passport-inspector
 
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:10MB}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/passport_inspector}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/001-create-passport-job-tables.yaml
 
 minio:
-  url: http://localhost:9000
-  access-key: minio99
-  secret-key: minio123
-  bucket: passport-inspector
-  part-size-bytes: 10485760
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minio99}
+  secret-key: ${MINIO_SECRET_KEY:minio123}
+  bucket: ${MINIO_BUCKET:passport-inspector}
+  part-size-bytes: ${MINIO_PART_SIZE_BYTES:10485760}
+
+smev:
+  client:
+    url: ${SMEV_CLIENT_URL:http://localhost:8081}
+    token: ${SMEV_CLIENT_TOKEN:test-token}
+
+worker:
+  csv-parser:
+    enabled: ${CSV_PARSER_WORKER_ENABLED:true} # TODO: ДОПИСАТЬ ВКЛ/ВЫКЛ
+    fixed-delay-ms: ${CSV_PARSER_WORKER_FIXED_DELAY_MS:3000}
+
+  passport-check:
+    enabled: ${PASSPORT_CHECK_WORKER_ENABLED:true}
+    fixed-delay-ms: ${PASSPORT_CHECK_WORKER_FIXED_DELAY_MS:3000}
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:demo-demo-demo-demo-demo-demo-demo-demo-secret}
