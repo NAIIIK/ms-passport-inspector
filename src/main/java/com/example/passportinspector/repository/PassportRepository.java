@@ -36,4 +36,8 @@ public interface PassportRepository extends JpaRepository<PassportEntity, UUID> 
     long countByJobId(UUID jobId);
 
     long countByJobIdAndCheckStatusNot(UUID jobId, PassportCheckStatus checkStatus);
+
+    long countByCheckStatus(PassportCheckStatus checkStatus);
+
+    long countByDocumentStatus(DocumentStatus documentStatus);
 }

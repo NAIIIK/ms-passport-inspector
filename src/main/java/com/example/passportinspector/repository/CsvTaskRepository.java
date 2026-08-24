@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface CsvTaskRepository extends JpaRepository<CsvTaskEntity, UUID> {
     Optional<CsvTaskEntity> findFirstByStatusOrderByCreatedAtAsc(CsvTaskStatus status);
+
+    long countByStatus(CsvTaskStatus status);
 }

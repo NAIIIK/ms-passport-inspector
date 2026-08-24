@@ -1,5 +1,6 @@
 package com.example.passportinspector.repository;
 
+import com.example.passportinspector.model.type.JobStatus;
 import com.example.passportinspector.repository.entity.JobEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,6 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
     Optional<JobEntity> findByJobId(UUID jobId);
 
     Optional<JobEntity> findByJobIdAndMerchantId(UUID jobId, UUID merchantId);
+
+    long countByJobStatus(JobStatus jobStatus);
 }
