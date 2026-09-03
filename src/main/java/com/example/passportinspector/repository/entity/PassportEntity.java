@@ -57,6 +57,9 @@ public class PassportEntity extends BaseEntity {
     @Column(name = "doc_no", length = 10)
     private String docNo;
 
+    @Column(name = "trace_id", length = 64)
+    private String traceId;
+
     @Column(name = "attempts", nullable = false)
     private int attempts;
 

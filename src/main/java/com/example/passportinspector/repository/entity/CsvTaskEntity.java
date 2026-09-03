@@ -23,24 +23,22 @@ import java.util.UUID;
 @Entity
 @Table(name = "csv_tasks")
 public class CsvTaskEntity extends BaseEntity {
-    /**
-     * Публичный идентификатор batch job-а.
-     */
+
     @Column(name = "job_id", nullable = false, unique = true)
     private UUID jobId;
 
     @Column(name = "merchant_id", nullable = false)
     private UUID merchantId;
 
-    /**
-     * Object name файла в MinIO.
-     */
     @Column(name = "file_name", nullable = false)
     private String fileName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private CsvTaskStatus status;
+
+    @Column(name = "trace_id", length = 64)
+    private String traceId;
 
     @Column(name = "attempts", nullable = false)
     private int attempts;

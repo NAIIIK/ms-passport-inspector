@@ -21,6 +21,7 @@ import com.example.passportinspector.repository.entity.CsvTaskEntity;
 import com.example.passportinspector.repository.entity.JobEntity;
 import com.example.passportinspector.repository.entity.PassportEntity;
 import com.example.passportinspector.util.CsvValidationUtil;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,6 +53,10 @@ public class PassportVerificationOrchestratorService {
                 .build();
 
         PassportEntity passport = passportEntityMapper.fromSingleRequest(jobId, merchantId, request);
+
+        String traceId = MDC.get("traceId");
+        job.setTraceId(traceId);
+        passport.setTraceId(traceId);
 
         jobRepository.save(job);
         passportRepository.save(passport);
@@ -93,9 +98,13 @@ public class PassportVerificationOrchestratorService {
                     .jobStatus(JobStatus.PENDING)
                     .build();
 
+            String traceId = MDC.get("traceId");
+            job.setTraceId(traceId);
+
             CsvTaskEntity csvTask = CsvTaskEntity.builder()
                     .jobId(jobId)
                     .merchantId(merchantId)
+                    .traceId(traceId)
                     .fileName(objectName)
                     .status(CsvTaskStatus.NEW)
                     .build();

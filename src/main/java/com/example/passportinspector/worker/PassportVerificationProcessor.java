@@ -8,6 +8,7 @@ import com.example.passportinspector.model.type.DocumentStatus;
 import com.example.passportinspector.model.type.PassportCheckStatus;
 import com.example.passportinspector.repository.PassportRepository;
 import com.example.passportinspector.repository.entity.PassportEntity;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,8 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class PassportVerificationProcessor {
+
+    private static final String TRACE_ID = "traceId";
 
     private static final String SMEV_VALID_STATUS = "300";
     private static final String SMEV_INVALID_STATUS = "301";
@@ -38,6 +41,10 @@ public class PassportVerificationProcessor {
     }
 
     private boolean process(PassportEntity passport) {
+        if (passport.getTraceId() != null && !passport.getTraceId().isBlank()) {
+            MDC.put(TRACE_ID, passport.getTraceId());
+        }
+
         passport.setCheckStatus(PassportCheckStatus.IN_PROGRESS);
         passport.setAttempts(passport.getAttempts() + 1);
         passport.setInProgressSince(Instant.now());
@@ -75,6 +82,7 @@ public class PassportVerificationProcessor {
                     passport.getExtId(),
                     passport.getDocumentStatus());
 
+            MDC.remove(TRACE_ID);
             return true;
         } catch (Exception e) {
             passport.setCheckStatus(PassportCheckStatus.FAILED);
@@ -85,6 +93,7 @@ public class PassportVerificationProcessor {
             log.error("Failed to process passport. passportId={}, jobId={}, extId={}",
                     passport.getId(), passport.getJobId(), passport.getExtId(), e);
 
+            MDC.remove(TRACE_ID);
             return true;
         }
     }

@@ -11,6 +11,7 @@ import com.example.passportinspector.repository.entity.CsvTaskEntity;
 import com.example.passportinspector.repository.entity.PassportEntity;
 import com.example.passportinspector.service.MinioService;
 import com.example.passportinspector.util.CsvRowParser;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CsvTaskProcessor {
+
+    private static final String TRACE_ID = "traceId";
 
     private final MinioService minioService;
     private final CsvTaskRepository csvTaskRepository;
@@ -41,6 +44,10 @@ public class CsvTaskProcessor {
     }
 
     private boolean process(CsvTaskEntity task) {
+        if (task.getTraceId() != null && !task.getTraceId().isBlank()) {
+            MDC.put(TRACE_ID, task.getTraceId());
+        }
+
         task.setStatus(CsvTaskStatus.IN_PROGRESS);
         task.setAttempts(task.getAttempts() + 1);
         task.setInProgressSince(Instant.now());
@@ -63,6 +70,7 @@ public class CsvTaskProcessor {
             log.info("CSV task processed. taskId={}, jobId={}, createdPassports={}",
                     task.getId(), task.getJobId(), passports.size());
 
+            MDC.remove(TRACE_ID);
             return true;
         } catch (Exception e) {
             task.setStatus(CsvTaskStatus.FAILED);
@@ -72,6 +80,7 @@ public class CsvTaskProcessor {
             log.error("Failed to process CSV task. taskId={}, jobId={}, reason={}",
                     task.getId(), task.getJobId(), e.getMessage(), e);
 
+            MDC.remove(TRACE_ID);
             return true;
         }
     }
@@ -99,11 +108,15 @@ public class CsvTaskProcessor {
                 }
 
                 var csvRow = csvRowParser.parse(line, rowNumber);
-                passports.add(passportEntityMapper.fromCsvRow(
+
+                PassportEntity passport = passportEntityMapper.fromCsvRow(
                         task.getJobId(),
                         task.getMerchantId(),
                         csvRow
-                ));
+                );
+
+                passport.setTraceId(task.getTraceId());
+                passports.add(passport);
             }
         }
 

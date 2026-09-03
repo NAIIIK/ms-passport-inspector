@@ -39,6 +39,9 @@ public class JobEntity extends BaseEntity {
     @Column(name = "job_status", nullable = false, length = 20)
     private JobStatus jobStatus;
 
+    @Column(name = "trace_id", length = 64)
+    private String traceId;
+
     @Column(name = "attempts", nullable = false)
     private int attempts;
 
