@@ -1,6 +1,5 @@
 package com.example.passportinspector.controller;
 
-import com.example.passportinspector.controller.PassportVerificationController;
 import com.example.passportinspector.model.dto.BatchCheckResultDto;
 import com.example.passportinspector.model.dto.CheckInitResponseDto;
 import com.example.passportinspector.model.dto.SingleCheckResultDto;

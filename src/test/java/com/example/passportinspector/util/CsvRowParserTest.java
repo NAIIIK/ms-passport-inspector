@@ -2,7 +2,6 @@ package com.example.passportinspector.util;
 
 import com.example.passportinspector.exception.CsvValidationException;
 import com.example.passportinspector.model.csv.PassportCsvRow;
-import com.example.passportinspector.util.CsvRowParser;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -12,8 +12,6 @@ import com.example.passportinspector.repository.PassportRepository;
 import com.example.passportinspector.repository.entity.CsvTaskEntity;
 import com.example.passportinspector.repository.entity.JobEntity;
 import com.example.passportinspector.repository.entity.PassportEntity;
-import com.example.passportinspector.service.MinioService;
-import com.example.passportinspector.service.PassportVerificationOrchestratorService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -61,12 +59,6 @@ class PassportVerificationOrchestratorServiceTest {
     @Test
     void singleCheckInitShouldCreateJobAndPassport() {
         SingleCheckRequestDto request = validSingleRequest();
-        PassportEntity mappedPassport = PassportEntity.builder()
-                .merchantId(MERCHANT_UUID)
-                .extId(request.getExtId())
-                .checkStatus(PassportCheckStatus.UNKNOWN)
-                .documentStatus(DocumentStatus.UNKNOWN)
-                .build();
 
         when(passportEntityMapper.fromSingleRequest(any(UUID.class), eq(MERCHANT_UUID), eq(request)))
                 .thenAnswer(invocation -> {

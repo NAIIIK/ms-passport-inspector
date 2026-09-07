@@ -1,7 +1,6 @@
 package com.example.passportinspector.util;
 
 import com.example.passportinspector.exception.CsvValidationException;
-import com.example.passportinspector.util.CsvValidationUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
