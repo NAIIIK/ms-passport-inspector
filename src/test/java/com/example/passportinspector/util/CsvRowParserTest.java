@@ -1,4 +1,4 @@
-package com.example.util;
+package com.example.passportinspector.util;
 
 import com.example.passportinspector.exception.CsvValidationException;
 import com.example.passportinspector.model.csv.PassportCsvRow;

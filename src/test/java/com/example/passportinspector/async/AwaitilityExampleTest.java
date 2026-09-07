@@ -1,4 +1,4 @@
-package com.example.async;
+package com.example.passportinspector.async;
 
 import com.example.passportinspector.model.type.PassportCheckStatus;
 import org.junit.jupiter.api.Test;

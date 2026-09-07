@@ -1,4 +1,4 @@
-package com.example.controller;
+package com.example.passportinspector.controller;
 
 import com.example.passportinspector.controller.PassportVerificationController;
 import com.example.passportinspector.model.dto.BatchCheckResultDto;
@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 @AutoConfigureMockMvc(addFilters = false)
+
 class PassportVerificationControllerTest {
 
     private static final String BASE_URL = "/v1/internal/validation/smev/4/clients";

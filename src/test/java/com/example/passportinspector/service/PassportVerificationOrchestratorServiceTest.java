@@ -1,4 +1,4 @@
-package com.example.service;
+package com.example.passportinspector.service;
 
 import com.example.passportinspector.mapper.PassportEntityMapper;
 import com.example.passportinspector.model.dto.CheckInitResponseDto;
@@ -69,7 +69,16 @@ class PassportVerificationOrchestratorServiceTest {
                 .build();
 
         when(passportEntityMapper.fromSingleRequest(any(UUID.class), eq(MERCHANT_UUID), eq(request)))
-                .thenReturn(mappedPassport);
+                .thenAnswer(invocation -> {
+                    UUID capturedJobId = invocation.getArgument(0);
+                    return PassportEntity.builder()
+                            .jobId(capturedJobId)
+                            .merchantId(MERCHANT_UUID)
+                            .extId(request.getExtId())
+                            .checkStatus(PassportCheckStatus.UNKNOWN)
+                            .documentStatus(DocumentStatus.UNKNOWN)
+                            .build();
+                });
 
         CheckInitResponseDto response;
         try (MDC.MDCCloseable ignored = MDC.putCloseable("traceId", TRACE_ID)) {
