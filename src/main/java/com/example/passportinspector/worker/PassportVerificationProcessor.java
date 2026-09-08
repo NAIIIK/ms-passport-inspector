@@ -74,7 +74,7 @@ public class PassportVerificationProcessor {
             passport.setCheckStatus(PassportCheckStatus.COMPLETED);
             passportRepository.save(passport);
 
-            jobStatusService.completeIfAllPassportsProcessed(passport.getJobId()); // TODO: ВЫНЕСТИ В СВОЙ ШЕДУЛЕР
+            jobStatusService.completeIfAllPassportsProcessed(passport.getJobId());
 
             log.info("Passport processed. passportId={}, jobId={}, extId={}, documentStatus={}",
                     passport.getId(),

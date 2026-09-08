@@ -41,7 +41,7 @@ smev:
 
 worker:
   csv-parser:
-    enabled: ${CSV_PARSER_WORKER_ENABLED:true} # TODO: ДОПИСАТЬ ВКЛ/ВЫКЛ
+    enabled: ${CSV_PARSER_WORKER_ENABLED:true}
     fixed-delay-ms: ${CSV_PARSER_WORKER_FIXED_DELAY_MS:3000}
 
   passport-check:
