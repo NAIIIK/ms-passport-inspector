@@ -34,6 +34,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PassportVerificationOrchestratorService {
 
+    private static final String JOB_NOT_FOUND_MSG = "Job not found";
+    private static final String VERIFICATION_FAILED_MSG = "Verification failed";
+
     private final MinioService minioService;
     private final PassportEntityMapper passportEntityMapper;
     private final PassportRepository passportRepository;
@@ -77,6 +80,7 @@ public class PassportVerificationOrchestratorService {
                 .map(job -> buildSingleResult(jobId, job.getJobStatus()))
                 .orElseGet(() -> SingleCheckResultDto.builder()
                         .checkStatus(JobStatus.FAILED)
+                        .errorCause(JOB_NOT_FOUND_MSG)
                         .build());
     }
 
@@ -139,6 +143,7 @@ public class PassportVerificationOrchestratorService {
                 .map(job -> buildBatchResult(jobId, merchantId, job.getJobStatus()))
                 .orElseGet(() -> BatchCheckResultDto.builder()
                         .checkStatus(JobStatus.FAILED)
+                        .errorCause(JOB_NOT_FOUND_MSG)
                         .data(List.of())
                         .build());
     }
@@ -160,12 +165,14 @@ public class PassportVerificationOrchestratorService {
                     })
                     .orElseGet(() -> SingleCheckResultDto.builder()
                             .checkStatus(JobStatus.FAILED)
+                            .errorCause("Job data missing")
                             .build());
         }
 
         if (jobStatus == JobStatus.FAILED) {
             return SingleCheckResultDto.builder()
                     .checkStatus(JobStatus.FAILED)
+                    .errorCause(VERIFICATION_FAILED_MSG)
                     .build();
         }
 
@@ -191,6 +198,7 @@ public class PassportVerificationOrchestratorService {
         if (jobStatus == JobStatus.FAILED) {
             return BatchCheckResultDto.builder()
                     .checkStatus(JobStatus.FAILED)
+                    .errorCause(VERIFICATION_FAILED_MSG)
                     .data(List.of())
                     .build();
         }

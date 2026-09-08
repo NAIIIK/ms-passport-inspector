@@ -16,4 +16,5 @@ public class SingleCheckResultDto {
 
     private JobStatus checkStatus;
     private String extId;
+    private String errorCause;
 }

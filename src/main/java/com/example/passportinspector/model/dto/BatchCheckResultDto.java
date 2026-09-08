@@ -17,6 +17,6 @@ import java.util.List;
 public class BatchCheckResultDto {
 
     private JobStatus checkStatus;
+    private String errorCause;
     private List<String> data;
-
 }
