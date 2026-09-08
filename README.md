@@ -29,14 +29,14 @@ Default port: `8080`.
 
 ## Configuration
 
-|         Env var         |                      Default                          |               Purpose              |
-|-------------------------|-------------------------------------------------------|------------------------------------|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/passport_inspector` |         Postgres connection        |
-| `MINIO_URL` | `http://localhost:9000` | Object storage for uploaded CSVs |
-| `SMEV_CLIENT_URL` | `http://localhost:8081` | smev-api-mock base URL |
-| `SMEV_CLIENT_TOKEN` | `test-token` | Header sent to SMEV on each check |
-| `JWT_SECRET` | (demo default - override in any real deployment) | Shared HS256 secret with the gateway |
-| `CSV_PARSER_WORKER_ENABLED` / `PASSPORT_CHECK_WORKER_ENABLED` | `true` | Toggle each background worker independently |
+| Env var                                                       | Default                                               | Purpose                                     |
+|---------------------------------------------------------------|-------------------------------------------------------|---------------------------------------------|
+| `SPRING_DATASOURCE_URL`                                       | `jdbc:postgresql://localhost:5432/passport_inspector` | Postgres connection                         |
+| `MINIO_URL`                                                   | `http://localhost:9000`                               | Object storage for uploaded CSVs            |
+| `SMEV_CLIENT_URL`                                             | `http://localhost:8081`                               | smev-api-mock base URL                      |
+| `SMEV_CLIENT_TOKEN`                                           | `test-token`                                          | Header sent to SMEV on each check           |
+| `JWT_SECRET`                                                  | (demo default - override in any real deployment)      | Shared HS256 secret with the gateway        |
+| `CSV_PARSER_WORKER_ENABLED` / `PASSPORT_CHECK_WORKER_ENABLED` | `true`                                                | Toggle each background worker independently |
 
 Full list in `src/main/resources/application.yaml`.
 
@@ -46,12 +46,12 @@ All endpoints are under `/v1/internal/validation/smev/4/clients`, require a
 bearer JWT with role `CLIENT`, and are merchant-scoped (the `merchantId`
 header must match the token's `merchantId` claim).
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/check` | Start a single passport verification job |
-| `GET` | `/check/{jobId}` | Poll result of a single check |
-| `POST` | `/check/batch` | Upload a CSV for batch verification |
-| `GET` | `/check/batch/{jobId}` | Poll result of a batch check |
+| Method | Path                   | Purpose                                  |
+|--------|------------------------|------------------------------------------|
+| `POST` | `/check`               | Start a single passport verification job |
+| `GET`  | `/check/{jobId}`       | Poll result of a single check            |
+| `POST` | `/check/batch`         | Upload a CSV for batch verification      |
+| `GET`  | `/check/batch/{jobId}` | Poll result of a batch check             |
 
 All four are async - `POST` calls return immediately with a `jobId`;
 `GET` calls report `IN_PROGRESS`, `COMPLETED`, or `FAILED`.
