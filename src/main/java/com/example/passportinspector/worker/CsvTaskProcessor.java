@@ -38,7 +38,7 @@ public class CsvTaskProcessor {
 
     @Transactional
     public boolean processOneCsvTask() {
-        return csvTaskRepository.findFirstByStatusOrderByCreatedAtAsc(CsvTaskStatus.NEW)
+        return csvTaskRepository.findFirstForProcessing(CsvTaskStatus.NEW.name())
                 .map(this::process)
                 .orElse(false);
     }
