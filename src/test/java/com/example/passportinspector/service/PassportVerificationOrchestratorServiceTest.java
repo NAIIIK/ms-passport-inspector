@@ -12,6 +12,10 @@ import com.example.passportinspector.repository.PassportRepository;
 import com.example.passportinspector.repository.entity.CsvTaskEntity;
 import com.example.passportinspector.repository.entity.JobEntity;
 import com.example.passportinspector.repository.entity.PassportEntity;
+import com.example.passportinspector.model.dto.BatchCheckResultDto;
+import com.example.passportinspector.model.dto.SingleCheckResultDto;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -143,6 +147,135 @@ class PassportVerificationOrchestratorServiceTest {
         assertThat(response.getErrorCause()).contains("Only .csv files are allowed");
 
         verifyNoInteractions(minioService, jobRepository, csvTaskRepository, passportRepository);
+    }
+
+    @Test
+    void singleCheckResultShouldReturnJobNotFoundWhenJobDoesNotExist() {
+        UUID jobId = UUID.randomUUID();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.empty());
+
+        SingleCheckResultDto result = service.singleCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(result.getErrorCause()).isEqualTo("Job not found");
+    }
+
+    @Test
+    void singleCheckResultShouldReturnInProgressWhenJobIsPending() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.PENDING).build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+
+        SingleCheckResultDto result = service.singleCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.IN_PROGRESS);
+        assertThat(result.getErrorCause()).isNull();
+    }
+
+    @Test
+    void singleCheckResultShouldReturnVerificationFailedWhenJobStatusIsFailed() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.FAILED).build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+
+        SingleCheckResultDto result = service.singleCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(result.getErrorCause()).isEqualTo("Verification failed");
+    }
+
+    @Test
+    void singleCheckResultShouldReturnJobDataMissingWhenCompletedButPassportMissing() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.COMPLETED).build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+        when(passportRepository.findFirstByJobId(jobId)).thenReturn(Optional.empty());
+
+        SingleCheckResultDto result = service.singleCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(result.getErrorCause()).isEqualTo("Job data missing");
+    }
+
+    @Test
+    void singleCheckResultShouldReturnCompletedWithExtIdWhenDocumentInvalid() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.COMPLETED).build();
+        PassportEntity passport = PassportEntity.builder()
+                .jobId(jobId)
+                .extId("client-001")
+                .documentStatus(DocumentStatus.INVALID)
+                .build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+        when(passportRepository.findFirstByJobId(jobId)).thenReturn(Optional.of(passport));
+
+        SingleCheckResultDto result = service.singleCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.COMPLETED);
+        assertThat(result.getExtId()).isEqualTo("client-001");
+        assertThat(result.getErrorCause()).isNull();
+    }
+
+    @Test
+    void singleCheckResultShouldReturnCompletedWithoutExtIdWhenDocumentValid() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.COMPLETED).build();
+        PassportEntity passport = PassportEntity.builder()
+                .jobId(jobId)
+                .extId("client-001")
+                .documentStatus(DocumentStatus.VALID)
+                .build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+        when(passportRepository.findFirstByJobId(jobId)).thenReturn(Optional.of(passport));
+
+        SingleCheckResultDto result = service.singleCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.COMPLETED);
+        assertThat(result.getExtId()).isNull();
+    }
+
+    @Test
+    void batchCheckResultShouldReturnJobNotFoundWhenJobDoesNotExist() {
+        UUID jobId = UUID.randomUUID();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.empty());
+
+        BatchCheckResultDto result = service.batchCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(result.getErrorCause()).isEqualTo("Job not found");
+        assertThat(result.getData()).isEmpty();
+    }
+
+    @Test
+    void batchCheckResultShouldReturnVerificationFailedWhenJobStatusIsFailed() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.FAILED).build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+
+        BatchCheckResultDto result = service.batchCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(result.getErrorCause()).isEqualTo("Verification failed");
+        assertThat(result.getData()).isEmpty();
+    }
+
+    @Test
+    void batchCheckResultShouldReturnInvalidExtIdsWhenCompleted() {
+        UUID jobId = UUID.randomUUID();
+        JobEntity job = JobEntity.builder().jobId(jobId).jobStatus(JobStatus.COMPLETED).build();
+        PassportEntity invalidPassport = PassportEntity.builder()
+                .jobId(jobId)
+                .extId("client-002")
+                .documentStatus(DocumentStatus.INVALID)
+                .build();
+        when(jobRepository.findByJobIdAndMerchantId(jobId, MERCHANT_UUID)).thenReturn(Optional.of(job));
+        when(passportRepository.findByJobIdAndMerchantIdAndDocumentStatus(jobId, MERCHANT_UUID, DocumentStatus.INVALID))
+                .thenReturn(List.of(invalidPassport));
+
+        BatchCheckResultDto result = service.batchCheckResult(jobId, MERCHANT_ID);
+
+        assertThat(result.getCheckStatus()).isEqualTo(JobStatus.COMPLETED);
+        assertThat(result.getData()).containsExactly("client-002");
     }
 
     private SingleCheckRequestDto validSingleRequest() {
